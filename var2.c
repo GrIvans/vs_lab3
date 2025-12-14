@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define N 4096
-#define THREADS 12
+#define THREADS 6
 #define REPEATS 100
 
 float **create_random(void) {
@@ -50,7 +50,7 @@ void print_arr(char *name, float **arr) {
 int main() {
   srand(time(NULL));
   omp_set_num_threads(THREADS);
-  int i, j, rank, size;
+  int i, j;
   float **A = create_random();
   float **B = create_random();
   float **C = create_random();
@@ -65,7 +65,7 @@ int main() {
       {
 #pragma omp section
         {
-          for (i = 0; i < N/2; i++) {
+          for (i = 0; i < N / 4; i++) {
             for (j = 0; j < N; j++) {
               Y[i][j] = (A[i][j] + B[i][j] + C[i][j] / B[i][j]) * C[i][j];
             }
@@ -73,7 +73,23 @@ int main() {
         }
 #pragma omp section
         {
-          for (i = N/2; i < N; i++) {
+          for (i = N / 4; i < N/2; i++) {
+            for (j = 0; j < N; j++) {
+              Y[i][j] = (A[i][j] + B[i][j] + C[i][j] / B[i][j]) * C[i][j];
+            }
+          }
+        }
+#pragma omp section
+        {
+          for (i = N / 2; i < N * 3 / 4; i++) {
+            for (j = 0; j < N; j++) {
+              Y[i][j] = (A[i][j] + B[i][j] + C[i][j] / B[i][j]) * C[i][j];
+            }
+          }
+        }
+#pragma omp section
+        {
+          for (i = N * 3 / 4; i < N; i++) {
             for (j = 0; j < N; j++) {
               Y[i][j] = (A[i][j] + B[i][j] + C[i][j] / B[i][j]) * C[i][j];
             }
@@ -84,13 +100,8 @@ int main() {
     double end_time = omp_get_wtime();
     full_time += end_time - start_time;
   }
-  printf("N: %d; Threads: %d; Repeats: %d; Avg. time: %f\n", N, THREADS, REPEATS,
-         full_time / REPEATS);
-
-  // print_arr("A", A);
-  // print_arr("B", B);
-  // print_arr("C", C);
-  // print_arr("Y", Y);
+  printf("N: %d; Threads: %d; Repeats: %d; Avg. time: %f\n", N, THREADS,
+         REPEATS, full_time / REPEATS);
 
   free_arr(A);
   free_arr(B);
